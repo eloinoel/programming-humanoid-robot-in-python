@@ -21,7 +21,10 @@
 
 
 from pid import PIDAgent
-from keyframes import hello
+from keyframes import *
+import numpy as np
+from scipy.interpolate import *
+import matplotlib.pyplot as plt
 
 
 class AngleInterpolationAgent(PIDAgent):
@@ -35,16 +38,66 @@ class AngleInterpolationAgent(PIDAgent):
 
     def think(self, perception):
         target_joints = self.angle_interpolation(self.keyframes, perception)
+        #print(self.target_joints)
         self.target_joints.update(target_joints)
         return super(AngleInterpolationAgent, self).think(perception)
 
     def angle_interpolation(self, keyframes, perception):
         target_joints = {}
-        # YOUR CODE HERE
+        time = perception.time
+
+        for l in range(len(keyframes[0])):
+
+            joint = keyframes[0][l]
+            times = (keyframes[1][l])
+            angles = [row[0] for row in keyframes[2][l]]
+            #yp = np.asarray([row[1][2] for row in keyframes[2][l]])
+
+
+            #last and first point must be identical
+            times_id = times + [times[-1]+1.0]
+            angles_id = angles + [angles[0]]
+            spline = CubicSpline(times_id, angles_id, bc_type="periodic")
+
+            max_anim_time = max(times)
+            cur_time = (time % max_anim_time)
+            target_joints[joint] = spline(cur_time + 0.001)
+
+
+            ##plot the shit
+            '''x = [(i / 100) * times_id[-1] for i in range(0, 100)]
+            y = [spline((i / 100) * times_id[-1]) for i in range(0, 100)]
+
+            plt.plot(x, y, '--')
+            plt.plot(times_id, angles_id, 'o')
+            plt.show()'''
+
+            '''for k in range(len(times)):
+                if(time%times[-1] <= times[k]):
+                    # hermite cubic spline interpolation
+                    x = times.copy()
+                    y = angles.copy()
+
+                    difq = float(y[k] - y[k-1]) / (x[k] - x[k-1])
+                    tmp = np.zeros(2)
+                    tmp[0] = float(difq - yp[k-1]) / (x[k] - x[k-1])
+                    tmp[1] = float(yp[k] - difq) / (x[k] - x[k-1])
+                    letzter = (tmp[1] - tmp[0]) / (x[k] - x[k-1])
+                    # -----polynom erstellen-----
+                    p = np.poly1d([y[k-1]])  # x^0
+                    p += yp[k] * np.poly1d([x[k-1]], True)  # x^1
+                    p += tmp[0] * np.poly1d([x[k-1], x[k-1]], True)  # x^2
+                    p += letzter * np.poly1d([x[k-1], x[k-1], x[k]], True)  # x^3
+
+                    target_joints[joint] = np.polyval(p, (time%times[-1]))
+                    #target_joints[joint] = angles[l - 1] + (angles[l] - angles[l - 1]) * (1 / ((times[l] - times[l - 1]) / ((time % times[-1]) - times[l - 1])))
+                    break'''
 
         return target_joints
 
 if __name__ == '__main__':
     agent = AngleInterpolationAgent()
     agent.keyframes = hello()  # CHANGE DIFFERENT KEYFRAMES
+    #print(agent.keyframes[2][0])
+    #print(agent.keyframes)
     agent.run()
