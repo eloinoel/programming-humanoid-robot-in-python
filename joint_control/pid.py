@@ -34,7 +34,7 @@ class PIDController(object):
         self.e1 = np.zeros(size)
         self.e2 = np.zeros(size)
         # ADJUST PARAMETERS BELOW
-        delay = 2
+        delay = 1
         self.Kp = 30
         self.Ki = 0.0
         self.Kd = -0.1
@@ -64,22 +64,18 @@ class PIDController(object):
         #delayed_prediction = 0
         #etk = target - ((sensor - self.u) + delayed_prediction)
 
-        '''ycur = self.y.pop()
-        self.y.append(ycur)
 
-        y_delayed = self.y.popleft()
-        y_ = sensor - y_delayed
-        F = y_ + ycur'''
-        '''y_pred = sensor + self.u*self.dt
-        last_y = self.y.popleft()
-        err_pred = sensor-last_y
-        new_pred_y = sensor + err_pred
-        etk = target - new_pred_y
-        '''
-        y_delayed = self.y.popleft()
-        err = abs(y_delayed-self.u)
-        F = sensor + err
+        '''y_delayed = self.y.popleft()
+        err = sensor - y_delayed
+        F = y_delayed + err'''
         #F = sensor
+
+        last_prediction = self.y.popleft()
+        prediction_error = sensor - last_prediction
+
+        #if last_prediction.all() == 0:
+        #    prediction_error = 0
+        F = self.u*self.dt + prediction_error
 
 
         etk = target - F
@@ -90,7 +86,7 @@ class PIDController(object):
         #self.u = self.u + speed*self.dt
         self.u = self.u + speed
         #self.u = self.u + offset
-        self.y.append(self.u)
+        self.y.append(self.u*self.dt)
 
         return self.u
 

@@ -51,16 +51,16 @@ class AngleInterpolationAgent(PIDAgent):
             joint = keyframes[0][l]
             times = (keyframes[1][l])
             angles = [row[0] for row in keyframes[2][l]]
+            max_anim_time = max(times)
+            cur_time = (time % max_anim_time)
             #yp = np.asarray([row[1][2] for row in keyframes[2][l]])
 
-
+            #Cubic Spline using scipy
             #last and first point must be identical
             times_id = times + [times[-1]+1.0]
             angles_id = angles + [angles[0]]
             spline = CubicSpline(times_id, angles_id, bc_type="periodic")
 
-            max_anim_time = max(times)
-            cur_time = (time % max_anim_time)
             target_joints[joint] = spline(cur_time + 0.001)
 
 
