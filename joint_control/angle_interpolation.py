@@ -93,6 +93,8 @@ class AngleInterpolationAgent(PIDAgent):
                     #target_joints[joint] = angles[l - 1] + (angles[l] - angles[l - 1]) * (1 / ((times[l] - times[l - 1]) / ((time % times[-1]) - times[l - 1])))
                     break'''
 
+        if "LHipYawPitch" in target_joints:
+            target_joints["RHipYawPitch"] = target_joints["LHipYawPitch"]
         return target_joints
 
 if __name__ == '__main__':
