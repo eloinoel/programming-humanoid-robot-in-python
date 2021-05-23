@@ -12,6 +12,8 @@
 
 from forward_kinematics import ForwardKinematicsAgent
 from numpy.matlib import identity
+import numpy as np
+from math import atan2
 
 
 class InverseKinematicsAgent(ForwardKinematicsAgent):
@@ -22,7 +24,53 @@ class InverseKinematicsAgent(ForwardKinematicsAgent):
         :param transform: 4x4 transform matrix
         :return: list of joint angles
         '''
-        joint_angles = []
+
+        joint_angles = {}
+        # YOUR CODE HERE
+        #jacobian matrix solution
+        lambda0 = 1
+        max_step = 0.1
+        #print(transform)
+        #target_effector = self.chains[effector_name][-1]
+        joints = self.chains[effector_name]
+        target = np.matrix([self.from_trans(transform)])   #target vector
+
+        theta = np.random.random(len(joints)) * 1e-5
+        for i in range(1000):
+            self.forward_kinematics(self.perception.joint)  # update joints
+
+            Ts = [0] * len(joints)  #transformation matrices
+            i = 0
+            for name in joints:
+                Ts[i] = self.transforms[name]
+                i += 1
+            Te = np.matrix([self.from_trans(Ts[-1])]).T #vector of effector point
+
+            e = target - Te
+            e[e > max_step] = max_step
+            e[e < -max_step] = -max_step
+            T = np.matrix([self.from_trans(i) for i in Ts]).T
+            J = Te - T
+            dT = Te - T
+            J[0, :] = -dT[1, :] # x
+            J[1, :] = dT[0, :] # y
+            J[-1, :] = 1  # angular
+            d_theta = lambda0 * np.linalg.pinv(J) * e
+            #print(d_theta)
+            theta += np.asarray(d_theta.T)[0]   #angles
+
+            #copy to dictionary
+            i = 0
+            for joint in joints:
+                joint_angles[joint] = theta[i]
+                i = i + 1
+                if (i == len(theta)):
+                    break
+
+            if  np.linalg.norm(d_theta) < 1e-4:
+                break
+
+        #print(theta)
         # YOUR CODE HERE
         return joint_angles
 
@@ -30,7 +78,35 @@ class InverseKinematicsAgent(ForwardKinematicsAgent):
         '''solve the inverse kinematics and control joints use the results
         '''
         # YOUR CODE HERE
-        self.keyframes = ([], [], [])  # the result joint angles have to fill in
+        joint_angles = self.inverse_kinematics(effector_name, transform)
+
+        names = self.chains[effector_name]
+        times = [[0.0, 3.0]] * len(names)
+        keys = []
+        i=0
+        for name in names:
+            keys.append([[self.perception.joint[name], [3, 0, 0]], [joint_angles[name], [3, 0, 0]]])
+            i+=1
+
+        self.keyframes = (names, times, keys)
+
+    #from lecture but changed to 3d
+    def from_trans(self, m):
+        '''get x, y, z , theta from transform matrix'''
+        x = m[3, 0]
+        y = m[3, 1]
+        z = m[3, 2]
+
+        theta = 0
+        if m[0, 0] == 1: #x rotation
+            theta = atan2(m[2, 1], m[1, 1])
+        elif m[1, 1] == 1: #y rotation
+            theta = atan2(m[0, 2], m[0, 0])
+        elif m[2, 2] == 1: #z rotation
+            theta = atan2(m[0, 1], m[0, 0])
+
+        return x, y, z, theta
+
 
 if __name__ == '__main__':
     agent = InverseKinematicsAgent()
