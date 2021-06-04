@@ -11,7 +11,7 @@
 
 
 from forward_kinematics import ForwardKinematicsAgent
-from numpy.matlib import identity
+from numpy import identity
 import numpy as np
 from math import atan2
 
